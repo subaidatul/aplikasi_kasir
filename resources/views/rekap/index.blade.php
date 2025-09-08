@@ -7,7 +7,8 @@
 
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Filter Rekap</h2>
-        <form action="{{ route('rekap.index') }}" method="GET">
+        {{-- Perbaikan: Ganti rute 'rekap.index' menjadi 'admin.rekap.index' --}}
+        <form action="{{ route('admin.rekap.index') }}" method="GET">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                     <label for="id_unit" class="block text-sm font-medium text-gray-700">Unit Usaha</label>
@@ -34,7 +35,7 @@
                 </div>
                 <div class="flex items-end">
                     <button type="submit"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">
+                        class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded w-full">
                         Tampilkan
                     </button>
                 </div>
@@ -42,7 +43,7 @@
         </form>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div class="bg-white p-6 rounded-lg shadow-md text-center">
             <h2 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Total Pendapatan</h2>
             <p class="text-3xl font-bold text-gray-800 mt-2">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
@@ -52,10 +53,6 @@
             <p class="text-3xl font-bold text-gray-800 mt-2">Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-md text-center">
-            <h2 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Laba Kotor</h2>
-            <p class="text-3xl font-bold text-gray-800 mt-2">Rp {{ number_format($labaKotor, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-md text-center">
             <h2 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Laba Bersih</h2>
             <p class="text-3xl font-bold text-gray-800 mt-2">Rp {{ number_format($labaBersih, 0, ',', '.') }}</p>
         </div>
@@ -63,28 +60,25 @@
 
     <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan</h2>
-        <div class="bg-white p-6 rounded-lg shadow-md">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">Laporan</h2>
-    <div class="flex gap-2 mb-4">
-        {{-- Tautan untuk Export Excel --}}
-        <a href="{{ route('laporan.export.excel', [
-            'tanggal_mulai' => request('tanggal_mulai'),
-            'tanggal_selesai' => request('tanggal_selesai'),
-            'id_unit' => request('id_unit')
-        ]) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            Export Excel
-        </a>
+        <div class="flex gap-2 mb-4">
+            {{-- Perbaikan: Ganti rute 'laporan.export.excel' menjadi 'admin.laporan.export.excel' --}}
+            <a href="{{ route('admin.laporan.export.excel', [
+                'tanggal_mulai' => request('tanggal_mulai'),
+                'tanggal_selesai' => request('tanggal_selesai'),
+                'id_unit' => request('id_unit')
+            ]) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Export Excel
+            </a>
 
-        {{-- Tautan untuk Cetak PDF --}}
-        <a href="{{ route('laporan.export.pdf', [
-            'tanggal_mulai' => request('tanggal_mulai'),
-            'tanggal_selesai' => request('tanggal_selesai'),
-            'id_unit' => request('id_unit')
-        ]) }}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" target="_blank">
-            Cetak PDF
-        </a>
-    </div>
-</div>
+            {{-- Perbaikan: Ganti rute 'laporan.export.pdf' menjadi 'admin.laporan.export.pdf' --}}
+            <a href="{{ route('admin.laporan.export.pdf', [
+                'tanggal_mulai' => request('tanggal_mulai'),
+                'tanggal_selesai' => request('tanggal_selesai'),
+                'id_unit' => request('id_unit')
+            ]) }}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" target="_blank">
+                Cetak PDF
+            </a>
+        </div>
 
         <h3 class="text-lg font-bold text-gray-700 mt-6 mb-2">Rincian Pendapatan</h3>
         <div class="overflow-x-auto mb-4">
@@ -109,8 +103,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Tidak ada data pendapatan yang
-                                ditemukan.</td>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Tidak ada data pendapatan yang ditemukan.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -124,7 +117,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NO</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TANGGAL</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UNIT</th>
+                        {{-- Perbaikan: Hapus kolom UNIT --}}
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NO TRANSAKSI</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TOTAL</th>
                     </tr>
@@ -134,14 +127,13 @@
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $index + 1 }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ \Carbon\Carbon::parse($pengeluaran->tanggal)->format('d-m-Y') }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $pengeluaran->unit->nama_unit ?? '-' }}</td>
+                            {{-- Perbaikan: Hapus kolom data UNIT --}}
                             <td class="px-6 py-4 whitespace-nowrap">{{ $pengeluaran->no_pengeluaran }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($pengeluaran->total, 0, ',', '.') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Tidak ada data pengeluaran yang
-                                ditemukan.</td>
+                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">Tidak ada data pengeluaran yang ditemukan.</td>
                         </tr>
                     @endforelse
                 </tbody>

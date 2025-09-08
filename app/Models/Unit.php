@@ -18,7 +18,7 @@ class Unit extends Model
 
     protected $fillable = [
         'nama_unit',
-        'keterangan',
+        'deskripsi',
     ];
 
     public function barangs()

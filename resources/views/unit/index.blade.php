@@ -6,7 +6,8 @@
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Daftar Unit</h1>
 
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <a href="{{ route('unit.create') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4 inline-block">
+        {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+        <a href="{{ route('admin.unit.create') }}" class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded mb-4 inline-block">
             Tambah Unit
         </a>
 
@@ -33,11 +34,13 @@
                             <td class="px-6 py-4 whitespace-nowrap">{{ $unit->nama_unit }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $unit->deskripsi }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="{{ route('unit.edit', $unit->id_unit) }}" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
-                                <form action="{{ route('unit.destroy', $unit->id_unit) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus unit ini?');">
+                                {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+                                <a href="{{ route('admin.unit.edit', $unit->id_unit) }}" class="text-indigo-600 hover:text-indigo-900 font-bold mr-2">Edit</a>
+                                {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+                                <form action="{{ route('admin.unit.destroy', $unit->id_unit) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus unit ini?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                    <button type="submit" class="text-red-600 hover:text-red-900 font-bold">Hapus</button>
                                 </form>
                             </td>
                         </tr>

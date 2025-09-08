@@ -12,19 +12,17 @@ class Barang extends Model
     protected $table = 'barang';
     protected $primaryKey = 'id_barang';
 
-    // Gunakan $fillable untuk secara eksplisit mengizinkan mass assignment
     protected $fillable = [
         'id_unit',
         'nama_barang',
         'kode_barang',
         'satuan',
-        'stok_awal',
-        'stok',
         'harga_beli',
         'harga_jual',
         'deskripsi',
         'status',
-        'kategori_produk' 
+        'kategori_produk',
+        'gambar'
     ];
 
     public function unit()
@@ -32,10 +30,6 @@ class Barang extends Model
         return $this->belongsTo(Unit::class, 'id_unit', 'id_unit');
     }
 
-    /**
-     * Relasi ke model DetailPendapatan.
-     * Digunakan untuk memeriksa apakah barang sudah memiliki transaksi.
-     */
     public function detailPendapatan()
     {
         return $this->hasMany(DetailPendapatan::class, 'id_barang', 'id_barang');
@@ -43,9 +37,9 @@ class Barang extends Model
 
     /**
      * Relasi ke model Stok.
-     * Digunakan untuk menghapus catatan stok terkait barang.
+     * Menggunakan nama berbeda agar tidak bentrok dengan kolom 'stok'.
      */
-    public function stok()
+    public function riwayatStok()
     {
         return $this->hasMany(Stok::class, 'id_barang', 'id_barang');
     }

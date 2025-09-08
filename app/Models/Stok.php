@@ -11,7 +11,17 @@ class Stok extends Model
 
     protected $table = 'stok';
     protected $primaryKey = 'id_stok';
-    protected $guarded = ['id_stok'];
+    
+    // Perbaikan: Ganti $guarded dengan $fillable
+    protected $fillable = [
+        'id_barang',
+        'id_unit',
+        'tanggal',
+        'keterangan',
+        'stok_masuk',
+        'stok_keluar',
+        'sisa_stok'
+    ];
 
     public function barang()
     {

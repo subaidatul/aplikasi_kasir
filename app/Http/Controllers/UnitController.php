@@ -27,7 +27,8 @@ class UnitController extends Controller
 
         Unit::create($request->all());
 
-        return redirect()->route('unit.index')->with('success', 'Unit berhasil ditambahkan!');
+        // PERBAIKAN: Ganti 'unit.index' menjadi 'admin.unit.index'
+        return redirect()->route('admin.unit.index')->with('success', 'Unit berhasil ditambahkan!');
     }
 
     public function edit(Unit $unit)
@@ -44,12 +45,14 @@ class UnitController extends Controller
 
         $unit->update($request->all());
 
-        return redirect()->route('unit.index')->with('success', 'Unit berhasil diupdate!');
+        // PERBAIKAN: Ganti 'unit.index' menjadi 'admin.unit.index'
+        return redirect()->route('admin.unit.index')->with('success', 'Unit berhasil diupdate!');
     }
 
     public function destroy(Unit $unit)
     {
         $unit->delete();
-        return redirect()->route('unit.index')->with('success', 'Unit berhasil dihapus!');
+        // PERBAIKAN: Ganti 'unit.index' menjadi 'admin.unit.index'
+        return redirect()->route('admin.unit.index')->with('success', 'Unit berhasil dihapus!');
     }
 }

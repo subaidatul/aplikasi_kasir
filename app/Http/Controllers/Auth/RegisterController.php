@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -9,35 +8,31 @@ use Illuminate\Support\Facades\Hash;
 
 class RegisterController extends Controller
 {
-    /**
-     * Menampilkan formulir registrasi.
-     */
     public function registerForm()
     {
         return view('administrator.auth.register');
     }
 
-    /**
-     * Menangani proses registrasi.
-     */
     public function register(Request $request)
     {
-        // Validasi input pengguna
+        // Validasi input pengguna, termasuk role
         $request->validate([
             'name'     => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users',
             'email'    => 'required|string|email|max:255|unique:users',
+            'role'     => 'required|string', // Validasi input role
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // Buat pengguna baru, tambahkan 'username' dari 'name'
+        // Buat pengguna baru dengan role yang dipilih
         User::create([
             'name'     => $request->name,
+            'username' => $request->username,
             'email'    => $request->email,
-            'username' => $request->name, 
             'password' => Hash::make($request->password),
+            'role'     => $request->role, // Simpan role yang dipilih dari form
         ]);
 
-        // Redirect pengguna ke halaman login setelah registrasi
         return redirect()->route('login.form')->with('success', 'Registrasi berhasil! Silakan masuk.');
     }
 }

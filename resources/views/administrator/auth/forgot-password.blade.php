@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halaman Login</title>
+    <title>Lupa Sandi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,7 +53,6 @@
             border-radius: 0.75rem;
             border: none;
             padding: 0.75rem 1.25rem 0.75rem 2.5rem;
-            /* Tambah padding kiri untuk ikon */
             outline: none;
             width: 100%;
         }
@@ -70,7 +69,7 @@
 
         .btn-green {
             background-color: #88BDB4;
-            color: #252424;
+            color: #252323;
             font-weight: 500;
             border-radius: 0.75rem;
             padding: 0.75rem 1.25rem;
@@ -80,12 +79,18 @@
         }
 
         .btn-green:hover {
-            background-color: #5da897;
+            background-color: #7ab3a6;
         }
 
-        .checkbox-label {
-            color: #6b7280;
+        .link-text {
+            color: #4a5568;
             font-size: 0.875rem;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link-text:hover {
+            text-decoration: underline;
         }
 
         .logo-pomi {
@@ -117,60 +122,50 @@
 
     <div class="z-10 w-full max-w-sm p-8 space-y-6 login-card">
         <div class="text-center">
-            @if ($errors->has('login'))
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
-                    role="alert">
-                    <strong class="font-bold">Error!</strong>
-                    <span class="block sm:inline">{{ $errors->first('login') }}</span>
-                </div>
-            @endif
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="h-16 w-16 mx-auto mb-4 text-gray-500">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
             <h2 class="text-3xl font-bold text-gray-900">
-                MASUK
+                Lupa Sandi
             </h2>
         </div>
-        <form class="space-y-4" action="{{ route('login') }}" method="POST">
+        <p class="text-center text-sm text-gray-600">
+            Masukkan alamat email Anda, dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.
+        </p>
+
+        @if (session('status'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form class="space-y-4" action="{{ route('password.email') }}" method="POST">
             @csrf
             <div class="input-container">
-                <i class="fa-solid fa-user input-icon"></i>
-                <input id="login" name="login" type="text" required placeholder="Email atau Username"
-                    value="{{ old('login') }}" class="input-field">
-            </div>
-
-            <div class="input-container">
-                <i class="fa-solid fa-lock input-icon"></i>
-                <input id="password" name="password" type="password" required placeholder="Password"
-                    class="input-field">
-            </div>
-
-            <div class="flex items-center justify-between mt-2">
-                <div class="flex items-center">
-                    <input id="remember-me" name="remember-me" type="checkbox"
-                        class="h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded">
-                    <label for="remember-me" class="ml-2 block text-sm checkbox-label">
-                        Ingatkan saya
-                    </label>
-                </div>
-                <div class="text-sm">
-                    <a href="{{ route('password.request') }}" class="font-medium text-gray-600 hover:text-gray-900">
-                        Lupa sandi?
-                    </a>
-                </div>
+                <i class="fa-solid fa-envelope input-icon"></i>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" required
+                    class="input-field" placeholder="Masukkan alamat email Anda">
             </div>
 
             <div class="space-y-3 pt-2">
                 <button type="submit" class="w-full btn-green">
-                    <i class="fas fa-sign-in-alt mr-2"></i> Masuk
+                    <i class="fas fa-paper-plane mr-2"></i> Kirim Tautan Reset Sandi
                 </button>
-                <a href="{{ route('register.form') }}" class="w-full btn-green">
-                    <i class="fas fa-user-plus mr-2"></i> Daftar
-                </a>
             </div>
         </form>
+
+        <div class="text-sm text-center">
+            <a href="{{ route('login.form') }}" class="link-text">
+                Kembali ke halaman login
+            </a>
+        </div>
     </div>
 </body>
 

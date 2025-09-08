@@ -9,17 +9,18 @@ use App\Models\Barang;
 use App\Models\Stok;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PendapatanController extends Controller
 {
     public function index()
     {
         $pendapatans = Pendapatan::with('unit', 'detailPendapatan.barang')
-                                 ->latest()
-                                 ->get();
+            ->latest()
+            ->get();
         return view('pendapatan.index', compact('pendapatans'));
     }
-    
+
     public function create()
     {
         $units = Unit::all();
@@ -35,12 +36,10 @@ class PendapatanController extends Controller
     public function edit(Pendapatan $pendapatan)
     {
         $units = Unit::all();
-        // Ambil barang yang termasuk dalam unit "Cafe/Wifi/Parkir" (id_unit = 1)
-        $barangPendapatanCafe = Barang::where('id_unit', 1)->get(); 
+        $barangPendapatanCafe = Barang::where('id_unit', 1)->get();
         $groupedBarangs = Barang::all()->groupBy('id_unit');
-        $pendapatan->load('detailPendapatan.barang'); 
+        $pendapatan->load('detailPendapatan.barang');
 
-        // Menggunakan id_unit 1 secara eksplisit untuk barang
         return view('pendapatan.edit', compact('pendapatan', 'units', 'groupedBarangs', 'barangPendapatanCafe'));
     }
 
@@ -54,49 +53,33 @@ class PendapatanController extends Controller
         DB::beginTransaction();
 
         try {
-            // Jika transaksi terkait dengan barang yang memiliki stok
             if ($pendapatan->detailPendapatan->isNotEmpty()) {
                 foreach ($pendapatan->detailPendapatan as $detail) {
-                    $barang = Barang::find($detail->id_barang);
-                    if ($barang) {
-                        $barang->stok += $detail->jumlah;
-                        $barang->save();
+                    $stokEntry = Stok::where('id_barang', $detail->id_barang)
+                        ->where('tanggal', $pendapatan->tanggal)
+                        ->first();
 
-                        // Catat pengembalian stok ke tabel stok
-                        Stok::create([
-                            'id_barang' => $barang->id_barang,
-                            'id_unit' => $pendapatan->id_unit,
-                            'no_transaksi' => $pendapatan->no_pendapatan,
-                            'tanggal' => now(),
-                            'keterangan' => 'Pembatalan Penjualan',
-                            'stok_masuk' => $detail->jumlah,
-                            'stok_keluar' => 0,
-                            'sisa_stok' => $barang->stok,
-                        ]);
+                    if ($stokEntry) {
+                        $stokEntry->stok_keluar -= $detail->jumlah;
+                        $stokEntry->sisa_stok = $stokEntry->sisa_stok + $detail->jumlah;
+                        $stokEntry->save();
+
+                        $this->recalculateFutureStok($stokEntry->id_barang, $stokEntry->tanggal);
                     }
                 }
             }
 
-            // Hapus semua detail dan pendapatan
             $pendapatan->detailPendapatan()->delete();
             $pendapatan->delete();
 
             DB::commit();
-            return redirect()->route('pendapatan.index')->with('success', 'Transaksi pendapatan berhasil dihapus.');
-
+            return redirect()->route('pendapatan.index')->with('success', 'Transaksi pendapatan berhasil dihapus dan stok dikembalikan. ✅');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menghapus transaksi: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Metode privat untuk memproses penyimpanan atau pembaruan pendapatan.
-     *
-     * @param Request $request
-     * @param Pendapatan|null $pendapatan
-     * @return \Illuminate\Http\RedirectResponse
-     */
     private function processPendapatan(Request $request, ?Pendapatan $pendapatan = null)
     {
         DB::beginTransaction();
@@ -104,25 +87,54 @@ class PendapatanController extends Controller
             $validatedData = $this->validatePendapatan($request);
             $idUnit = $validatedData['id_unit'];
             $noPendapatan = $pendapatan ? $pendapatan->no_pendapatan : 'TRX-' . time();
-            
-            // Logika untuk mengelola stok saat update
+
             if ($pendapatan) {
-                // Hapus detail lama dan kembalikan stok
-                $this->revertOldStok($pendapatan);
+                $this->revertOldStokFromTransaction($pendapatan);
                 $pendapatan->detailPendapatan()->delete();
             }
 
-            // --- PERBAIKAN LOGIKA DI SINI ---
-            // Buat atau perbarui record Pendapatan terlebih dahulu
+            if ($idUnit == 1) {
+                foreach ($validatedData['items'] as $item) {
+                    $barang = Barang::find($item['id_barang']);
+                    if (!$barang) {
+                        throw new \Exception('Barang tidak ditemukan.');
+                    }
+
+                    $stokEntry = Stok::firstOrNew([
+                        'id_barang' => $item['id_barang'],
+                        'tanggal' => $validatedData['tanggal'],
+                        'id_unit' => $idUnit,
+                    ]);
+
+                    $currentSisaStok = $stokEntry->exists ? $stokEntry->sisa_stok : (Stok::where('id_barang', $item['id_barang'])
+                        ->where('tanggal', '<', $validatedData['tanggal'])
+                        ->latest('tanggal')
+                        ->latest('created_at')
+                        ->first()
+                        ->sisa_stok ?? 0);
+
+                    $stokEntry->stok_keluar += $item['jumlah'];
+                    $newSisaStok = $currentSisaStok + $stokEntry->stok_masuk - $stokEntry->stok_keluar;
+
+                    if ($newSisaStok < 0) {
+                        throw new \Exception('Stok barang ' . $barang->nama_barang . ' tidak mencukupi. Sisa stok: ' . ($currentSisaStok + $stokEntry->stok_masuk - ($stokEntry->stok_keluar - $item['jumlah'])) . ', keluar: ' . $item['jumlah']);
+                    }
+
+                    $stokEntry->sisa_stok = $newSisaStok;
+                    $stokEntry->keterangan = 'Penjualan dan Penambahan Stok Manual';
+                    $stokEntry->save();
+                    $this->recalculateFutureStok($stokEntry->id_barang, $stokEntry->tanggal);
+                }
+            }
+
             $baseData = [
                 'id_unit' => $idUnit,
                 'tanggal' => $validatedData['tanggal'],
                 'no_pendapatan' => $noPendapatan,
             ];
 
-            // Tentukan total dan deskripsi berdasarkan unit
             switch ($idUnit) {
-                case 1: // Cafe/Wifi/Parkir (Barang)
+                case 1:
                     $totalPendapatan = 0;
                     foreach ($validatedData['items'] as $item) {
                         $barang = Barang::find($item['id_barang']);
@@ -131,22 +143,24 @@ class PendapatanController extends Controller
                     $baseData['total'] = $totalPendapatan;
                     $baseData['deskripsi'] = $validatedData['deskripsi'] ?? null;
                     break;
-                case 2: // Sewa Tempat
+                case 2:
                     $baseData['total'] = $validatedData['harga_akhir'];
                     $baseData['deskripsi'] = 'Pendapatan Sewa Tempat atas nama ' . ($validatedData['nama_penyewa'] ?? '') . '. ' . ($validatedData['deskripsi'] ?? '');
                     break;
-                case 3: // Seluncuran
+                case 3:
                     $baseData['total'] = $validatedData['tiket_terjual'] * $validatedData['harga_tiket'];
                     $baseData['deskripsi'] = 'Pendapatan Tiket Seluncuran. ' . ($validatedData['deskripsi'] ?? '');
                     break;
-                case 4: // ATV
-                    $baseData['total'] = $validatedData['jumlah_sewa'] * 100000;
-                    $baseData['deskripsi'] = 'Pendapatan Sewa ATV. ' . ($validatedData['deskripsi'] ?? '');
-                    break;
-                default:
-                    // Logika untuk unit lain jika ada
-                    $baseData['total'] = 0;
-                    $baseData['deskripsi'] = $validatedData['deskripsi'] ?? null;
+                case 4:
+                    $jumlahSewa = $validatedData['jumlah_sewa'];
+                    $durasiSewa = $validatedData['durasi_sewa'];
+                    $tarifSewa = $validatedData['tarif_sewa'];
+
+                    $baseData['total'] = $jumlahSewa * $durasiSewa * $tarifSewa;
+
+                    // Simpan data mentah di deskripsi dengan format khusus
+                    $deskripsi = "Jumlah Sewa: {$jumlahSewa}, Durasi: {$durasiSewa}, Tarif: {$tarifSewa}.";
+                    $baseData['deskripsi'] = $deskripsi . ($validatedData['deskripsi'] ?? '');
                     break;
             }
 
@@ -156,40 +170,15 @@ class PendapatanController extends Controller
                 $pendapatan = Pendapatan::create($baseData);
             }
 
-            // Proses detail hanya jika unit usaha menjual barang (contoh: id_unit 1)
-            if ($idUnit == 1) { 
+            if ($idUnit == 1) {
                 foreach ($validatedData['items'] as $item) {
                     $barang = Barang::find($item['id_barang']);
-                    
-                    if (!$barang) {
-                        throw new \Exception('Barang tidak ditemukan.');
-                    }
-    
-                    if ($barang->stok < $item['jumlah']) {
-                        throw new \Exception('Stok barang ' . $barang->nama_barang . ' tidak mencukupi.');
-                    }
-
-                    // Tambahkan detail pendapatan
                     DetailPendapatan::create([
                         'id_pendapatan' => $pendapatan->id_pendapatan,
                         'id_barang' => $item['id_barang'],
                         'jumlah' => $item['jumlah'],
-                        'harga' => $barang->harga_jual, // Tambahkan harga di sini
+                        'harga' => $barang->harga_jual,
                         'total' => $barang->harga_jual * $item['jumlah'],
-                    ]);
-
-                    // Kurangi stok barang dan catat ke tabel stok
-                    $barang->stok -= $item['jumlah'];
-                    $barang->save();
-                    Stok::create([
-                        'id_barang' => $barang->id_barang,
-                        'id_unit' => $idUnit,
-                        'no_transaksi' => $noPendapatan,
-                        'tanggal' => $validatedData['tanggal'],
-                        'keterangan' => 'Penjualan',
-                        'stok_masuk' => 0,
-                        'stok_keluar' => $item['jumlah'],
-                        'sisa_stok' => $barang->stok,
                     ]);
                 }
             }
@@ -197,26 +186,62 @@ class PendapatanController extends Controller
             DB::commit();
             $message = $pendapatan ? 'diperbarui' : 'disimpan';
             return redirect()->route('pendapatan.index')->with('success', "Transaksi pendapatan berhasil $message!");
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Gagal memproses transaksi: ' . $e->getMessage());
         }
     }
-    
-    // --- Metode lain tetap sama ---
-    private function revertOldStok(Pendapatan $pendapatan)
+
+    private function revertOldStokFromTransaction(Pendapatan $pendapatan)
     {
-        foreach ($pendapatan->detailPendapatan as $detail) {
-            $barang = Barang::find($detail->id_barang);
-            if ($barang) {
-                $barang->stok += $detail->jumlah;
-                $barang->save();
+        if ($pendapatan->detailPendapatan->isNotEmpty()) {
+            foreach ($pendapatan->detailPendapatan as $detail) {
+                $stokEntry = Stok::where('id_barang', $detail->id_barang)
+                    ->where('tanggal', $pendapatan->tanggal)
+                    ->first();
+
+                if ($stokEntry) {
+                    $stokEntry->stok_keluar -= $detail->jumlah;
+                    $stokEntry->sisa_stok += $detail->jumlah;
+                    $stokEntry->save();
+
+                    $this->recalculateFutureStok($stokEntry->id_barang, $stokEntry->tanggal);
+                }
             }
         }
-        Stok::where('no_transaksi', $pendapatan->no_pendapatan)->delete();
     }
-    
+
+    private function recalculateFutureStok($idBarang, $startDate)
+    {
+        $stokEntries = Stok::where('id_barang', $idBarang)
+            ->where('tanggal', '>=', $startDate)
+            ->orderBy('tanggal')
+            ->orderBy('created_at')
+            ->get();
+
+        $lastStokBefore = Stok::where('id_barang', $idBarang)
+            ->where('tanggal', '<', $startDate)
+            ->latest('tanggal')
+            ->latest('created_at')
+            ->first();
+
+        $currentSisaStok = $lastStokBefore ? $lastStokBefore->sisa_stok : 0;
+
+        foreach ($stokEntries as $entry) {
+            $newSisaStok = $currentSisaStok + $entry->stok_masuk - $entry->stok_keluar;
+
+            if ($entry->sisa_stok === $newSisaStok) {
+                $currentSisaStok = $newSisaStok;
+                continue;
+            }
+
+            $entry->sisa_stok = $newSisaStok;
+            $entry->save();
+
+            $currentSisaStok = $newSisaStok;
+        }
+    }
+
     protected function validatePendapatan(Request $request)
     {
         $baseRules = [
@@ -225,30 +250,32 @@ class PendapatanController extends Controller
             'deskripsi' => 'nullable|string',
         ];
 
-        // Tambahkan validasi sesuai unit yang dipilih
         switch ($request->id_unit) {
-            case 1: // Cafe/Wifi/Parkir
+            case 1:
                 $rules = array_merge($baseRules, [
                     'items' => 'required|array',
                     'items.*.id_barang' => 'required|exists:barang,id_barang',
                     'items.*.jumlah' => 'required|integer|min:1',
                 ]);
                 break;
-            case 2: // Sewa Tempat
+            case 2:
                 $rules = array_merge($baseRules, [
                     'nama_penyewa' => 'required|string',
                     'harga_akhir' => 'required|numeric|min:0',
                 ]);
                 break;
-            case 3: // Seluncuran
+            case 3:
                 $rules = array_merge($baseRules, [
                     'tiket_terjual' => 'required|integer|min:1',
                     'harga_tiket' => 'required|numeric|min:0',
                 ]);
                 break;
-            case 4: // ATV
+            case 4:
+                // PERBAIKAN DI SINI
                 $rules = array_merge($baseRules, [
                     'jumlah_sewa' => 'required|integer|min:1',
+                    'durasi_sewa' => 'required|integer|min:1',
+                    'tarif_sewa' => 'required|numeric|min:0',
                 ]);
                 break;
             default:
@@ -257,5 +284,30 @@ class PendapatanController extends Controller
         }
 
         return $request->validate($rules);
+    }
+
+    public function cetakStruk($id)
+    {
+        try {
+            // Mengambil data pendapatan berdasarkan ID
+            $data = Pendapatan::with('unit', 'detailPendapatan.barang')->find($id);
+
+            // Jika data tidak ditemukan, tampilkan halaman 404
+            if (!$data) {
+                abort(404, 'Transaksi pendapatan tidak ditemukan.');
+            }
+
+            // Tambahkan variabel 'jenis' di sini
+            $jenis = 'pendapatan';
+
+            // Kirim 'data' DAN 'jenis' ke view
+            return view('struk.show', compact('data', 'jenis'));
+        } catch (ModelNotFoundException $e) {
+            // Tangkap exception jika ID tidak ditemukan dan kembalikan 404
+            abort(404, 'Transaksi pendapatan tidak ditemukan.');
+        } catch (\Exception $e) {
+            // Tangkap exception lainnya
+            return back()->with('error', 'Gagal mencetak struk: ' . $e->getMessage());
+        }
     }
 }

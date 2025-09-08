@@ -15,9 +15,8 @@ return new class extends Migration
             $table->id('id_stok');
             $table->foreignId('id_barang')->constrained('barang', 'id_barang')->onDelete('cascade');
             $table->foreignId('id_unit')->constrained('unit', 'id_unit')->onDelete('cascade'); // Menambahkan kolom 'id_unit'
-            $table->string('no_transaksi'); // No. Pendapatan atau No. Pengeluaran
             $table->date('tanggal');
-            $table->string('keterangan'); // Contoh: 'Pembelian' atau 'Penjualan'
+            $table->string('keterangan'); 
             $table->integer('stok_masuk')->default(0);
             $table->integer('stok_keluar')->default(0);
             $table->integer('sisa_stok');

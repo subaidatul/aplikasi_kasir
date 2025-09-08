@@ -88,9 +88,9 @@
                 <p>Unit Usaha: {{ $data->unit->nama_unit }}</p>
                 <p>Deskripsi: {{ $data->deskripsi }}</p>
             @else
+                {{-- Perbaikan: Hapus baris 'Unit Usaha' untuk pengeluaran --}}
                 <p>No. Transaksi: {{ $data->no_pengeluaran }}</p>
                 <p>Tanggal: {{ \Carbon\Carbon::parse($data->tanggal)->format('d-m-Y') }}</p>
-                <p>Unit Usaha: {{ $data->unit->nama_unit }}</p>
                 <p>Deskripsi: {{ $data->deskripsi }}</p>
             @endif
         </div>
@@ -106,13 +106,11 @@
                     </div>
                 @endforeach
             @else
-                {{-- Perbaikan: Ganti 'detailPengeluaran' menjadi 'details' --}}
                 @foreach ($data->details as $item)
                     <div class="item">
-                        {{-- Perbaikan: Ganti $item->barang->nama_barang dengan $item->nama_keperluan --}}
                         <span class="item-name">{{ $item->nama_keperluan }}</span>
                         <span class="item-qty">{{ $item->jumlah }}x</span>
-                        {{-- Perbaikan: Hitung harga dari total / jumlah --}}
+                        {{-- Hitung harga dari total / jumlah --}}
                         <span class="item-price">{{ number_format($item->total / $item->jumlah, 0, ',', '.') }}</span>
                         <span class="item-total">{{ number_format($item->total, 0, ',', '.') }}</span>
                     </div>

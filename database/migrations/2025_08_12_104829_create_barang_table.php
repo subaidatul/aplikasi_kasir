@@ -15,9 +15,7 @@ return new class extends Migration
             $table->id('id_barang');
             $table->foreignId('id_unit')->constrained('unit', 'id_unit')->onDelete('cascade');
             $table->string('nama_barang');
-           $table->integer('stok_awal')->default(0);
             $table->string('satuan')->nullable();
-            $table->integer('stok')->default(0);
             $table->decimal('harga_beli', 10, 2);
             $table->decimal('harga_jual', 10, 2);
             $table->text('deskripsi')->nullable();

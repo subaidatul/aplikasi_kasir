@@ -28,9 +28,9 @@ class RekapController extends Controller
         
         // 4. Terapkan filter ke semua query jika ada
         if ($idUnit) {
+            // Filter hanya diterapkan pada pendapatan dan detail pendapatan
             $queryPendapatan->where('id_unit', $idUnit);
-            $queryPengeluaran->where('id_unit', $idUnit);
-            // Tambahkan filter unit ke query DetailPendapatan melalui relasi
+            
             $queryDetailPendapatan->whereHas('pendapatan', function ($query) use ($idUnit) {
                 $query->where('id_unit', $idUnit);
             });
@@ -60,7 +60,6 @@ class RekapController extends Controller
             ->join('barang', 'detail_pendapatan.id_barang', '=', 'barang.id_barang')
             ->sum(DB::raw('detail_pendapatan.jumlah * barang.harga_beli'));
         
-        // Pastikan hasilnya tidak null
         $totalHargaBeli = $totalHargaBeli ?? 0;
 
         // 7. Hitung total Pengeluaran
@@ -74,7 +73,8 @@ class RekapController extends Controller
         
         // 10. Dapatkan data untuk ditampilkan di tabel
         $pendapatans = $queryPendapatan->with('unit')->get();
-        $pengeluarans = $queryPengeluaran->with('unit')->get();
+        // Ambil semua pengeluaran tanpa filter unit
+        $pengeluarans = $queryPengeluaran->get();
         
         // 11. Kirim data ke view
         return view('rekap.index', compact(

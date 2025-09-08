@@ -15,7 +15,7 @@ class StrukController extends Controller
     {
         // Ambil semua data pendapatan dan pengeluaran
         $pendapatan = Pendapatan::with('unit')->get();
-        $pengeluaran = Pengeluaran::with('unit')->get();
+        $pengeluaran = Pengeluaran::get();
 
         // Gabungkan kedua koleksi dan urutkan berdasarkan tanggal
         $struks = $pendapatan->toBase()->merge($pengeluaran->toBase())->sortByDesc('created_at');
@@ -36,7 +36,8 @@ class StrukController extends Controller
                 abort(404, 'Transaksi pendapatan tidak ditemukan.');
             }
         } elseif ($jenis == 'pengeluaran') {
-            $data = Pengeluaran::with('unit', 'details')->find($id);
+            // Perubahan: Hapus with('unit') dari sini
+            $data = Pengeluaran::with('details')->find($id);
             if (!$data) {
                 abort(404, 'Transaksi pengeluaran tidak ditemukan.');
             }

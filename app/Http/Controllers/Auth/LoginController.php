@@ -8,34 +8,35 @@ use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    /**
-     * Menampilkan formulir login.
-     */
     public function loginForm()
     {
         return view('administrator.auth.login');
     }
 
-    /**
-     * Menangani proses login.
-     */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'login'    => 'required|string',
-            'password' => 'required|string',
+        $request->validate([
+            'login'    => ['required', 'string'],
+            'password' => ['required', 'string'],
         ]);
 
-        $field = filter_var($request->input('login'), FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $loginType = filter_var($request->input('login'), FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        if (Auth::attempt([$field => $credentials['login'], 'password' => $credentials['password']])) {
+        $credentials = [
+            $loginType  => $request->input('login'),
+            'password'  => $request->input('password'),
+        ];
+        
+        $remember = $request->filled('remember-me');
+
+        if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return redirect()->route('dashboard');
+            return redirect()->intended('/dashboard')->with('success', 'Selamat datang!');
         }
 
         return back()->withErrors([
-            'login' => 'Nama pengguna atau email dan password yang Anda masukkan tidak cocok dengan catatan kami.',
-        ])->onlyInput('login');
+            'login' => 'Email/Username atau password salah.',
+        ])->withInput();
     }
 
     public function logout(Request $request)
@@ -43,7 +44,6 @@ class LoginController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('login.form');
+        return redirect('/');
     }
 }

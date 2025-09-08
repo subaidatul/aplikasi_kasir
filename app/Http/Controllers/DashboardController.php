@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index()
     {
         // 1. Ambil total Harga Jual (Pendapatan)
-        $totalPendapatan = Pendapatan::sum('total'); // Perbaikan: Ubah nama variabel di sini
+        $totalPendapatan = Pendapatan::sum('total');
 
         // 2. Hitung total Harga Beli dari semua barang yang terjual
         $totalHargaBeli = DetailPendapatan::select(
@@ -25,44 +25,60 @@ class DashboardController extends Controller
         // 3. Ambil total Pengeluaran
         $totalPengeluaran = Pengeluaran::sum('total');
 
-        // 4. Hitung Laba Kotor
-        // Laba Kotor = Harga Jual - Harga Beli
-        $labaKotor = $totalPendapatan - $totalHargaBeli; // Perbaikan: Gunakan variabel yang baru
-        
+        // Laba Kotor dihapus, karena tidak dibutuhkan
+
         // 5. Hitung Laba Bersih
         // Laba Bersih = Harga Jual - Harga Beli - Pengeluaran
-        $labaBersih = $totalPendapatan - $totalHargaBeli - $totalPengeluaran; // Perbaikan: Gunakan variabel yang baru
+        $labaBersih = $totalPendapatan - $totalHargaBeli - $totalPengeluaran;
         
-        // 6. Siapkan data untuk grafik
+        // 6. Siapkan data untuk grafik PERBULAN
         $pendapatanSeries = Pendapatan::select(
-            DB::raw('DATE(created_at) as date'),
+            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
             DB::raw('SUM(total) as total')
         )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
 
         $pengeluaranSeries = Pengeluaran::select(
-            DB::raw('DATE(created_at) as date'),
+            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
             DB::raw('SUM(total) as total') 
         )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
 
-        $dates = $pendapatanSeries->keys()->merge($pengeluaranSeries->keys())->unique()->sort()->values();
+        // Menambahkan query untuk menghitung jumlah pengunjung (berdasarkan jumlah transaksi)
+        $pengunjungSeries = Pendapatan::select(
+            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+            DB::raw('COUNT(*) as total_pengunjung')
+        )
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total_pengunjung', 'month');
 
-        $labels = $dates->map(fn($date) => date('d M', strtotime($date)))->toArray();
-        $pendapatanData = $dates->map(fn($date) => $pendapatanSeries->get($date, 0))->toArray();
-        $pengeluaranData = $dates->map(fn($date) => $pengeluaranSeries->get($date, 0))->toArray();
+        // Menggabungkan semua bulan unik dari ketiga series
+        $months = $pendapatanSeries->keys()
+                                   ->merge($pengeluaranSeries->keys())
+                                   ->merge($pengunjungSeries->keys())
+                                   ->unique()
+                                   ->sort()
+                                   ->values();
+
+        // Mengonversi format bulan ke label yang lebih mudah dibaca
+        $labels = $months->map(fn($month) => date('M Y', strtotime($month . '-01')))->toArray();
+        $pendapatanData = $months->map(fn($month) => $pendapatanSeries->get($month, 0))->toArray();
+        $pengeluaranData = $months->map(fn($month) => $pengeluaranSeries->get($month, 0))->toArray();
+        $pengunjungData = $months->map(fn($month) => $pengunjungSeries->get($month, 0))->toArray();
         
         $grafikData = [
             'labels' => $labels,
             'pendapatan' => $pendapatanData,
-            'pengeluaran' => $pengeluaranData
+            'pengeluaran' => $pengeluaranData,
+            'pengunjung' => $pengunjungData
         ];
 
-        // 7. Kirim data ke view. Pastikan variabel yang dikirim sama dengan di view.
-        return view('dashboard', compact('totalPendapatan', 'totalPengeluaran', 'labaKotor', 'labaBersih', 'grafikData')); // Perbaikan: Ganti 'totalHargaJual' menjadi 'totalPendapatan'
+        // 7. Kirim data ke view. Perhatikan variabel 'labaKotor' sudah dihapus.
+        return view('dashboard', compact('totalPendapatan', 'totalPengeluaran', 'labaBersih', 'grafikData'));
     }
 }

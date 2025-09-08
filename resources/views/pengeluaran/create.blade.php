@@ -6,18 +6,14 @@
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Tambah Pengeluaran Baru</h1>
 
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <form action="{{ route('pengeluaran.store') }}" method="POST">
+        {{-- Perbaikan: Ganti rute 'pengeluaran.store' menjadi 'admin.pengeluaran.store' --}}
+        <form action="{{ route('admin.pengeluaran.store') }}" method="POST">
             @csrf
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="id_unit" class="block text-sm font-medium text-gray-700">Unit</label>
-                    <select name="id_unit" id="id_unit" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        @foreach ($units as $unit)
-                            <option value="{{ $unit->id_unit }}">{{ $unit->nama_unit }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                {{-- Perbaikan: Tambahkan input hidden untuk id_unit dari user yang login --}}
+                <input type="hidden" name="id_unit" value="{{ Auth::user()->id_unit }}">
+
                 <div>
                     <label for="tanggal" class="block text-sm font-medium text-gray-700">Tanggal</label>
                     <input type="date" name="tanggal" id="tanggal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" value="{{ now()->toDateString() }}">
@@ -25,21 +21,17 @@
             </div>
 
             <div class="mt-6">
-                <label for="deskripsi" class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                <textarea name="deskripsi" id="deskripsi" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
-            </div>
-
-            <div class="mt-6">
                 <h3 class="text-lg font-medium text-gray-800 mb-2">Item Pengeluaran</h3>
                 <div id="items-container">
-                    </div>
+                    {{-- Item-item pengeluaran akan ditambahkan di sini --}}
+                </div>
                 <button type="button" id="add-item-btn" class="mt-4 text-sm text-blue-500 hover:text-blue-700">
                     + Tambah Item
                 </button>
             </div>
 
             <div class="mt-6">
-                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                <button type="submit" class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded">
                     Simpan Transaksi
                 </button>
             </div>
@@ -54,7 +46,7 @@
 
             function createItemRow() {
                 const itemRow = document.createElement('div');
-                itemRow.classList.add('flex', 'gap-4', 'mb-4', 'items-end');
+                itemRow.classList.add('flex', 'gap-4', 'mb-4', 'items-end', 'item-row');
                 itemRow.innerHTML = `
                     <div class="flex-1">
                         <label for="item_keperluan_${itemIndex}" class="block text-sm font-medium text-gray-700">Keperluan</label>
@@ -80,7 +72,7 @@
 
             itemsContainer.addEventListener('click', function(e) {
                 if (e.target.classList.contains('remove-item-btn')) {
-                    e.target.closest('.flex').remove();
+                    e.target.closest('.item-row').remove();
                 }
             });
 

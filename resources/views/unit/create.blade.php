@@ -6,7 +6,8 @@
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Tambah Unit Baru</h1>
 
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <form action="{{ route('unit.store') }}" method="POST">
+        {{-- PERBAIKAN: Mengubah route('unit.store') menjadi route('admin.unit.store') --}}
+        <form action="{{ route('admin.unit.store') }}" method="POST">
             @csrf
             
             <div class="mb-4">
@@ -20,7 +21,7 @@
             </div>
             
             <div class="mt-6">
-                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                <button type="submit" class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded">
                     Simpan Unit
                 </button>
             </div>

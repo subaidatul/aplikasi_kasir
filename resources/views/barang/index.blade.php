@@ -3,12 +3,12 @@
 @section('page_title', 'Daftar Barang')
 
 @section('content')
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Daftar Barang</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Daftar Barang(item)</h1>
 
     <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        {{-- Tombol untuk menambah barang pendapatan saja --}}
-        <a href="{{ route('barang.create', ['type' => 'pendapatan']) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-4 inline-block">
-            Tambah Barang
+        {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+        <a href="{{ route('admin.barang.create') }}" class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded mb-4 inline-block">
+            Tambah Barang(item)
         </a>
 
         @if(session('success'))
@@ -16,21 +16,24 @@
                 {{ session('success') }}
             </div>
         @endif
-
-        {{-- Bagian untuk Daftar Barang Pendapatan Cafe --}}
-        <h2 class="text-2xl font-semibold text-gray-700 mt-6 mb-4 border-b pb-2">Daftar Barang Cafe</h2>
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {{ session('error') }}
+            </div>
+        @endif
+        
+        <h2 class="text-2xl font-semibold text-gray-700 mt-6 mb-4 border-b pb-2">Daftar Barang(item) Cafe</h2>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Barang</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Barang(item)</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang(item)</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok Awal</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sisa Stok</th>
-                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Beli</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Beli</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
@@ -40,12 +43,17 @@
                     @foreach ($barangPendapatanCafe as $index => $barang)
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $index + 1 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if ($barang->gambar)
+                                    <img src="{{ Storage::url($barang->gambar) }}" alt="{{ $barang->nama_barang }}" class="h-12 w-12 object-cover rounded-full">
+                                @else
+                                    <span class="text-gray-400">Tidak ada</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $barang->kode_barang }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $barang->nama_barang }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $barang->kategori_produk }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $barang->unit->nama_unit ?? 'N/A' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $barang->stok_awal }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $barang->stok }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($barang->harga_beli, 0, ',', '.') }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($barang->harga_jual, 0, ',', '.') }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -54,11 +62,13 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="{{ route('barang.edit', $barang->id_barang) }}" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
-                                <form action="{{ route('barang.destroy', $barang->id_barang) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus barang ini?');">
+                                {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+                                <a href="{{ route('admin.barang.edit', $barang->id_barang) }}" class="text-indigo-600 hover:text-indigo-900 font-bold mr-2">Edit</a>
+                                {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
+                                <form action="{{ route('admin.barang.destroy', $barang->id_barang) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus barang ini?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                    <button type="submit" class="text-red-600 hover:text-red-900 font-bold">Hapus</button>
                                 </form>
                             </td>
                         </tr>
