@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id('id_detail_pendapatan');
             $table->foreignId('id_pendapatan')->constrained('pendapatan', 'id_pendapatan')->onDelete('cascade');
             $table->foreignId('id_barang')->constrained('barang', 'id_barang')->onDelete('cascade');
+            $table->string('nama_barang_manual')->nullable();
             $table->integer('jumlah');
+            $table->decimal('harga', 10, 2)->nullable();
             $table->decimal('total', 10, 2);
             $table->timestamps();
         });

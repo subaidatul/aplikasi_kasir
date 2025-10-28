@@ -35,31 +35,28 @@ class StokController extends Controller
         ]);
 
         DB::beginTransaction();
-
         try {
-            // Temukan entri stok terakhir sebelum tanggal yang diinput
+            $stokEntry = Stok::firstOrNew([
+                'id_barang' => $validatedData['id_barang'],
+                'tanggal' => $validatedData['tanggal'],
+                'id_unit' => $validatedData['id_unit'],
+            ]);
+
             $lastStokBefore = Stok::where('id_barang', $validatedData['id_barang'])
                 ->where('tanggal', '<', $validatedData['tanggal'])
                 ->latest('tanggal')
                 ->latest('created_at')
                 ->first();
 
-            $currentSisaStok = $lastStokBefore ? $lastStokBefore->sisa_stok : 0;
-            $newSisaStok = $currentSisaStok + $validatedData['jumlah'];
+            $initialStokToday = $lastStokBefore ? $lastStokBefore->sisa_stok : 0;
+            $stokEntry->stok_masuk += $validatedData['jumlah'];
 
-            // Buat entri stok baru
-            Stok::create([
-                'id_barang' => $validatedData['id_barang'],
-                'id_unit' => $validatedData['id_unit'],
-                'tanggal' => $validatedData['tanggal'],
-                'keterangan' => $validatedData['keterangan'] ?? 'Penambahan Stok Manual',
-                'stok_masuk' => $validatedData['jumlah'],
-                'stok_keluar' => 0,
-                'sisa_stok' => $newSisaStok,
-            ]);
+            $newSisaStok = $initialStokToday + $stokEntry->stok_masuk - $stokEntry->stok_keluar;
+            $stokEntry->sisa_stok = $newSisaStok;
+            $stokEntry->keterangan = $validatedData['keterangan'] ?? 'Penambahan Stok Manual';
+            $stokEntry->save();
 
-            // Hitung ulang stok untuk hari-hari setelah tanggal ini
-            $this->recalculateFutureStok($validatedData['id_barang'], $validatedData['tanggal']);
+            $this->recalculateFutureStok($stokEntry->id_barang, $stokEntry->tanggal);
 
             DB::commit();
             return redirect()->route('admin.stok.index')->with('success', 'Stok berhasil ditambahkan! ✅');
@@ -88,25 +85,29 @@ class StokController extends Controller
 
         DB::beginTransaction();
         try {
-            // Simpan data lama untuk perhitungan ulang
-            $idBarang = $stok->id_barang;
-            $tanggal = $stok->tanggal;
+            $oldIdBarang = $stok->id_barang;
+            $oldTanggal = $stok->tanggal;
+            $oldStokMasuk = $stok->stok_masuk;
 
-            // **PERBAIKAN KRITIS:**
-            // Update entri stok yang ada dengan data baru.
-            // Asumsi form edit hanya untuk operasi penambahan (stok masuk),
-            // maka stok_keluar direset ke 0.
-            $stok->update([
-                'id_barang' => $validatedData['id_barang'],
-                'id_unit' => $validatedData['id_unit'],
-                'tanggal' => $validatedData['tanggal'],
-                'keterangan' => $validatedData['keterangan'] ?? 'Perubahan Stok Manual',
-                'stok_masuk' => $validatedData['jumlah'],
-                'stok_keluar' => 0,
-            ]);
+            // Jika ada perubahan pada barang atau tanggal, kita hapus entri lama
+            // dan buat entri baru untuk memicu perhitungan ulang penuh.
+            if ($oldIdBarang != $validatedData['id_barang'] || $oldTanggal != $validatedData['tanggal']) {
+                $stok->delete();
+                $this->recalculateFutureStok($oldIdBarang, $oldTanggal); // Hitung ulang stok lama
 
-            // Panggil kembali fungsi untuk menghitung ulang stok ke depan
-            $this->recalculateFutureStok($idBarang, $tanggal);
+                // Proses data baru seolah-olah dari form store()
+                $this->store($request);
+                DB::commit();
+                return redirect()->route('admin.stok.index')->with('success', 'Data stok berhasil diperbarui! ✅');
+            }
+
+            // Jika tidak ada perubahan pada id_barang atau tanggal,
+            // cukup update entri yang ada dan panggil perhitungan ulang
+            $stok->stok_masuk = $validatedData['jumlah'];
+            $stok->keterangan = $validatedData['keterangan'] ?? 'Perubahan Stok Manual';
+            $stok->save();
+
+            $this->recalculateFutureStok($stok->id_barang, $stok->tanggal);
 
             DB::commit();
             return redirect()->route('admin.stok.index')->with('success', 'Data stok berhasil diperbarui! ✅');
@@ -125,7 +126,6 @@ class StokController extends Controller
 
             $stok->delete();
 
-            // Panggil kembali fungsi untuk menghitung ulang stok ke depan
             $this->recalculateFutureStok($idBarang, $tanggal);
 
             DB::commit();
@@ -138,28 +138,23 @@ class StokController extends Controller
 
     private function recalculateFutureStok($idBarang, $startDate)
     {
-        // Ambil semua entri stok untuk barang ini dari tanggal yang ditentukan hingga yang paling baru
         $stokEntries = Stok::where('id_barang', $idBarang)
             ->where('tanggal', '>=', $startDate)
             ->orderBy('tanggal')
             ->orderBy('created_at')
             ->get();
 
-        // Cari sisa stok terakhir dari hari-hari sebelum tanggal yang ditentukan
         $lastStokBefore = Stok::where('id_barang', $idBarang)
             ->where('tanggal', '<', $startDate)
             ->latest('tanggal')
             ->latest('created_at')
             ->first();
 
-        // Tentukan sisa stok awal untuk perhitungan
         $currentSisaStok = $lastStokBefore ? $lastStokBefore->sisa_stok : 0;
 
         foreach ($stokEntries as $entry) {
-            // Hitung sisa stok baru berdasarkan sisa stok sebelumnya dan stok masuk/keluar entri ini
             $newSisaStok = $currentSisaStok + $entry->stok_masuk - $entry->stok_keluar;
 
-            // Jika sisa stok tidak berubah, lewati
             if ($entry->sisa_stok === $newSisaStok) {
                 $currentSisaStok = $newSisaStok;
                 continue;
@@ -168,7 +163,6 @@ class StokController extends Controller
             $entry->sisa_stok = $newSisaStok;
             $entry->save();
 
-            // Perbarui sisa stok untuk iterasi berikutnya
             $currentSisaStok = $newSisaStok;
         }
     }

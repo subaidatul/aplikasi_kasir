@@ -83,7 +83,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">{{ $stok->keterangan }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
-                                <a href="{{ route('admin.stok.edit', $stok->id_stok) }}"
+                                {{-- <a href="{{ route('admin.stok.edit', $stok->id_stok) }}"
                                     class="text-indigo-600 hover:text-indigo-900 mr-2 transition-colors duration-300 font-bold">Edit</a>
                                 {{-- Perbaikan: Tambah awalan 'admin.' pada rute --}}
                                 <form action="{{ route('admin.stok.destroy', $stok->id_stok) }}" method="POST"

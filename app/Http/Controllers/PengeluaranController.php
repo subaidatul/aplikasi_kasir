@@ -81,7 +81,7 @@ class PengeluaranController extends Controller
             $baseData = [
                 'id_user' => Auth::id(),
                 'id_unit' => Auth::user()->id_unit,
-                'tanggal' => $validatedData['tanggal'],
+                'tanggal' => now(), // Perbaikan: Menggunakan now() untuk menyimpan tanggal dan waktu
                 'deskripsi' => $request->input('deskripsi', ''),
                 'total' => $totalPengeluaran,
             ];

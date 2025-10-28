@@ -76,7 +76,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Kasir Rest Area</h1>
+            <h1>Rest Area Betek</h1>
             <p>Bukti Transaksi</p>
             <p>-------------------------</p>
         </div>
@@ -84,27 +84,46 @@
         <div class="details">
             @if ($jenis == 'pendapatan')
                 <p>No. Transaksi: {{ $data->no_pendapatan }}</p>
-                <p>Tanggal: {{ \Carbon\Carbon::parse($data->tanggal)->format('d-m-Y') }}</p>
+                <p>Tanggal: {{ \Carbon\Carbon::parse($data->tanggal)->format('d-m-Y H:i') }}</p>
                 <p>Unit Usaha: {{ $data->unit->nama_unit }}</p>
                 <p>Deskripsi: {{ $data->deskripsi }}</p>
             @else
-                {{-- Perbaikan: Hapus baris 'Unit Usaha' untuk pengeluaran --}}
                 <p>No. Transaksi: {{ $data->no_pengeluaran }}</p>
-                <p>Tanggal: {{ \Carbon\Carbon::parse($data->tanggal)->format('d-m-Y') }}</p>
+                <p>Tanggal: {{ \Carbon\Carbon::parse($data->tanggal)->format('d-m-Y H:i') }}</p>
                 <p>Deskripsi: {{ $data->deskripsi }}</p>
             @endif
         </div>
 
         <div class="items">
             @if ($jenis == 'pendapatan')
+                {{-- LOGIKA PERBAIKAN UNTUK MENGAKOMODASI ITEM STOK/KAFE DAN KEMAH RIMBUN --}}
                 @foreach ($data->detailPendapatan as $item)
+                    @php
+                        $itemName = '';
+                        $itemPrice = $item->harga; // Harga selalu diambil dari detail transaksi
+                        
+                        // Tentukan Nama Item
+                        if ($item->barang) {
+                            // Jika ada relasi ke tabel barang (untuk item stok/kafe)
+                            $itemName = $item->barang->nama_barang;
+                        } elseif ($item->nama_barang_manual) {
+                            // Jika tidak ada relasi barang (untuk item Kemah Rimbun atau input manual)
+                            $itemName = $item->nama_barang_manual;
+                        } else {
+                            // Fallback jika tidak ada keduanya
+                            $itemName = 'Item Tidak Dikenal';
+                        }
+                    @endphp
+                    
                     <div class="item">
-                        <span class="item-name">{{ $item->barang->nama_barang }}</span>
+                        <span class="item-name">{{ $itemName }}</span>
                         <span class="item-qty">{{ $item->jumlah }}x</span>
-                        <span class="item-price">{{ number_format($item->barang->harga_jual, 0, ',', '.') }}</span>
+                        {{-- Harga menggunakan $itemPrice (dari detail_pendapatan.harga) --}}
+                        <span class="item-price">{{ number_format($itemPrice, 0, ',', '.') }}</span>
                         <span class="item-total">{{ number_format($item->total, 0, ',', '.') }}</span>
                     </div>
                 @endforeach
+            {{-- AKHIR DARI LOGIKA PERBAIKAN --}}
             @else
                 @foreach ($data->details as $item)
                     <div class="item">

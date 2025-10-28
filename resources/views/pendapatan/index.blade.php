@@ -34,14 +34,17 @@
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit
+                        </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                        </th>
                         <th scope="col"
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -52,35 +55,39 @@
                                 {{ \Carbon\Carbon::parse($pendapatan->tanggal)->format('d-m-Y') }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $pendapatan->unit->nama_unit }}</td>
 
-                            {{-- Kolom baru untuk menampilkan nama barang --}}
+                            {{-- Kolom yang diperbaiki untuk menampilkan item --}}
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if ($pendapatan->detailPendapatan->isNotEmpty())
                                     @foreach ($pendapatan->detailPendapatan as $detail)
                                         @if ($detail->barang)
+                                            {{-- Menampilkan item dari relasi (untuk Unit 1, Warung & Toko) --}}
                                             {{ $detail->barang->nama_barang }} (x{{ $detail->jumlah }})@if (!$loop->last)
+                                                ,
+                                            @endif
+                                        @elseif ($detail->nama_barang_manual)
+                                            {{-- Menampilkan item yang dimasukkan secara manual (untuk Unit 6, Kemah Rimbun) --}}
+                                            {{ $detail->nama_barang_manual }} (x{{ $detail->jumlah }})@if (!$loop->last)
                                                 ,
                                             @endif
                                         @endif
                                     @endforeach
                                 @else
+                                    {{-- Menampilkan deskripsi jika tidak ada detail item (untuk unit lain) --}}
                                     {{ $pendapatan->deskripsi }}
                                 @endif
                             </td>
+
                             <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($pendapatan->total, 0, ',', '.') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                {{-- Menambahkan tombol edit --}}
                                 <a href="{{ route('pendapatan.edit', $pendapatan->id_pendapatan) }}"
                                     class="text-indigo-600 hover:text-indigo-900 font-bold mr-2">
                                     Edit
                                 </a>
-                                {{-- Menambahkan tombol cetak struk --}}
                                 <a href="{{ route('pendapatan.cetakStruk', $pendapatan->id_pendapatan) }}" target="_blank"
                                     class="text-blue-700 hover:text-blue-900 font-bold mr-2">
                                     Cetak Struk
                                 </a>
-
-                                {{-- Menambahkan tombol hapus --}}
                                 <form action="{{ route('pendapatan.destroy', $pendapatan->id_pendapatan) }}" method="POST"
                                     class="inline-block"
                                     onsubmit="return confirm('Anda yakin ingin menghapus data ini? Aksi ini tidak dapat dibatalkan.');">

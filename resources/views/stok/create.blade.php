@@ -46,7 +46,7 @@
 
             <div class="mt-6">
                 <button type="submit" class="bg-[#88BDB4] hover:bg-teal-700 text-black hover:text-white font-bold py-2 px-4 rounded transition-colors duration-300">
-                    Simpan Stok
+                    Simpan Stok 
                 </button>
                 {{-- PERBAIKAN: Mengganti route('stok.index') menjadi route('admin.stok.index') --}}
                 <a href="{{ route('admin.stok.index') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2 transition-colors duration-300">

@@ -12,73 +12,86 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // 1. Ambil total Harga Jual (Pendapatan)
+        // 1. Ambil total Pendapatan, Pengeluaran, dan Laba Bersih
         $totalPendapatan = Pendapatan::sum('total');
-
-        // 2. Hitung total Harga Beli dari semua barang yang terjual
         $totalHargaBeli = DetailPendapatan::select(
             DB::raw('SUM(detail_pendapatan.jumlah * barang.harga_beli) as total_beli')
         )
             ->join('barang', 'detail_pendapatan.id_barang', '=', 'barang.id_barang')
             ->value('total_beli') ?? 0;
-
-        // 3. Ambil total Pengeluaran
         $totalPengeluaran = Pengeluaran::sum('total');
-
-        // Laba Kotor dihapus, karena tidak dibutuhkan
-
-        // 5. Hitung Laba Bersih
-        // Laba Bersih = Harga Jual - Harga Beli - Pengeluaran
         $labaBersih = $totalPendapatan - $totalHargaBeli - $totalPengeluaran;
         
-        // 6. Siapkan data untuk grafik PERBULAN
+        // 2. Siapkan data untuk grafik bulanan
+        $grafikDataBulanan = $this->getChartData('monthly');
+
+        // 3. Siapkan data untuk grafik tahunan
+        $grafikDataTahunan = $this->getChartData('yearly');
+
+        // 4. Kirim semua data ke view
+        return view('dashboard', compact(
+            'totalPendapatan', 
+            'totalPengeluaran', 
+            'labaBersih', 
+            'grafikDataBulanan',
+            'grafikDataTahunan'
+        ));
+    }
+
+    /**
+     * Mengambil data pendapatan, pengeluaran, dan pengunjung untuk grafik.
+     * @param string $period 'monthly' atau 'yearly'
+     * @return array
+     */
+    private function getChartData(string $period)
+    {
+        $dateFormat = ($period === 'monthly') ? '%Y-%m' : '%Y';
+        $groupByColumn = ($period === 'monthly') ? 'month' : 'year';
+
         $pendapatanSeries = Pendapatan::select(
-            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+            DB::raw("DATE_FORMAT(created_at, '{$dateFormat}') as `{$groupByColumn}`"),
             DB::raw('SUM(total) as total')
         )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+            ->groupBy($groupByColumn)
+            ->orderBy($groupByColumn)
+            ->pluck('total', $groupByColumn);
 
         $pengeluaranSeries = Pengeluaran::select(
-            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+            DB::raw("DATE_FORMAT(created_at, '{$dateFormat}') as `{$groupByColumn}`"),
             DB::raw('SUM(total) as total') 
         )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+            ->groupBy($groupByColumn)
+            ->orderBy($groupByColumn)
+            ->pluck('total', $groupByColumn);
 
-        // Menambahkan query untuk menghitung jumlah pengunjung (berdasarkan jumlah transaksi)
         $pengunjungSeries = Pendapatan::select(
-            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+            DB::raw("DATE_FORMAT(created_at, '{$dateFormat}') as `{$groupByColumn}`"),
             DB::raw('COUNT(*) as total_pengunjung')
         )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total_pengunjung', 'month');
+            ->groupBy($groupByColumn)
+            ->orderBy($groupByColumn)
+            ->pluck('total_pengunjung', $groupByColumn);
 
-        // Menggabungkan semua bulan unik dari ketiga series
-        $months = $pendapatanSeries->keys()
+        // Menggabungkan semua periode unik
+        $periods = $pendapatanSeries->keys()
                                    ->merge($pengeluaranSeries->keys())
                                    ->merge($pengunjungSeries->keys())
                                    ->unique()
                                    ->sort()
                                    ->values();
 
-        // Mengonversi format bulan ke label yang lebih mudah dibaca
-        $labels = $months->map(fn($month) => date('M Y', strtotime($month . '-01')))->toArray();
-        $pendapatanData = $months->map(fn($month) => $pendapatanSeries->get($month, 0))->toArray();
-        $pengeluaranData = $months->map(fn($month) => $pengeluaranSeries->get($month, 0))->toArray();
-        $pengunjungData = $months->map(fn($month) => $pengunjungSeries->get($month, 0))->toArray();
+        // Mengonversi data ke format yang dibutuhkan oleh Chart.js
+        // Perbaikan: Hapus konversi tanggal di sini. Kirim data mentah.
+        $labels = $periods->toArray(); 
+        $pendapatanData = $periods->map(fn($p) => $pendapatanSeries->get($p, 0))->toArray();
+        $pengeluaranData = $periods->map(fn($p) => $pengeluaranSeries->get($p, 0))->toArray();
+        $pengunjungData = $periods->map(fn($p) => $pengunjungSeries->get($p, 0))->toArray();
         
-        $grafikData = [
+        return [
             'labels' => $labels,
             'pendapatan' => $pendapatanData,
             'pengeluaran' => $pengeluaranData,
             'pengunjung' => $pengunjungData
         ];
-
-        // 7. Kirim data ke view. Perhatikan variabel 'labaKotor' sudah dihapus.
-        return view('dashboard', compact('totalPendapatan', 'totalPengeluaran', 'labaBersih', 'grafikData'));
     }
 }

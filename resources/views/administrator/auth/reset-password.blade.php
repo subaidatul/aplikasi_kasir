@@ -82,15 +82,22 @@
             background-color: #7ab3a6;
         }
         
-        .logo-pomi {
+        .logo-PE {
             position: absolute;
             top: 4vh;
-            left: 15%;
+            left: 12%;
             transform: translateX(-50%);
             z-index: 20;
             opacity: 0.8;
         }
-
+        .logo-pomi {
+            position: absolute;
+            top: 4vh;
+            left: 23%;
+            transform: translateX(-50%);
+            z-index: 20;
+            opacity: 0.8;
+        }
         .logo-bettek {
             position: absolute;
             top: 4vh;
@@ -102,6 +109,9 @@
 </head>
 
 <body>
+    <div class="logo-PE">
+        <img src="{{ asset('storage/images/logo PE.png') }}" alt="Logo PE" class="h-12 w-auto">
+    </div>
     <div class="logo-pomi">
         <img src="{{ asset('storage/images/logo pomi.png') }}" alt="Logo POMI" class="h-12 w-auto">
     </div>
